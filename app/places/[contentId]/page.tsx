@@ -65,7 +65,7 @@ export async function generateMetadata({
         type: "website",
       },
     };
-  } catch (error) {
+  } catch {
     return {
       title: "관광지 상세 - My Trip",
       description: "관광지 상세 정보를 확인하세요.",
@@ -113,7 +113,12 @@ export default async function PlacePage({ params }: PlacePageProps) {
             </Button>
             <div className="flex items-center gap-2">
               <BookmarkButton contentId={detailData.contentid} size="sm" />
-              <ShareButton size="sm" />
+              <ShareButton
+                size="sm"
+                title={detailData.title}
+                description={detailData.overview?.substring(0, 100)}
+                imageUrl={detailData.firstimage || detailData.firstimage2}
+              />
             </div>
           </div>
 

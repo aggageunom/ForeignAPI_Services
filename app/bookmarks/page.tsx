@@ -19,7 +19,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { TourList } from "@/components/tour-list";
-import { Error } from "@/components/ui/error";
+import { Error as ErrorComponent } from "@/components/ui/error";
 import { getUserBookmarks } from "@/lib/api/bookmark-api";
 import { getTourDetail } from "@/lib/api/tour-api";
 import type { TourItem } from "@/lib/types/tour";
@@ -37,7 +37,9 @@ export default async function BookmarksPage() {
     // 북마크 목록 조회
     const result = await getUserBookmarks();
     if (!result.success || !result.bookmarks) {
-      throw new Error(result.error || "북마크 목록을 불러오는데 실패했습니다.");
+      const errorMessage: string =
+        result.error || "북마크 목록을 불러오는데 실패했습니다.";
+      throw new Error(errorMessage);
     }
 
     const contentIds = result.bookmarks;
@@ -105,7 +107,7 @@ export default async function BookmarksPage() {
     console.error("[BookmarksPage] 오류 발생:", error);
     return (
       <main className="container mx-auto px-4 py-8">
-        <Error
+        <ErrorComponent
           message={
             error instanceof Error
               ? error.message

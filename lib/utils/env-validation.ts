@@ -24,8 +24,9 @@ const REQUIRED_ENV_VARS = {
 } as const;
 
 /**
- * 선택적 환경변수 목록
+ * 선택적 환경변수 목록 (향후 사용 예정)
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const OPTIONAL_ENV_VARS = {
   NEXT_PUBLIC_STORAGE_BUCKET: "Supabase Storage Bucket",
   NEXT_PUBLIC_SITE_URL: "Site URL",

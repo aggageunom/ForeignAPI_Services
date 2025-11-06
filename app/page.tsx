@@ -18,7 +18,6 @@
 import type { Metadata } from "next";
 import { TourList } from "@/components/tour-list";
 import { TourFilters } from "@/components/tour-filters";
-import { TourSearch } from "@/components/tour-search";
 import { TourSort } from "@/components/tour-sort";
 import { TourPagination } from "@/components/tour-pagination";
 import { Error } from "@/components/ui/error";
@@ -28,6 +27,7 @@ import {
   searchKeyword,
 } from "@/lib/api/tour-api";
 import type { TourItem } from "@/lib/types/tour";
+import { formatApiError } from "@/lib/utils/error-handler";
 
 export const metadata: Metadata = {
   title: "한국 관광지 검색",
@@ -217,15 +217,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     );
   } catch (error: unknown) {
     console.error("[HomePage] API 호출 오류:", error);
-    let errorMessage = "관광지 목록을 불러오는 중 오류가 발생했습니다.";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    } else if (error && typeof error === "object") {
-      const errorObj = error as { message?: string };
-      if (typeof errorObj.message === "string") {
-        errorMessage = errorObj.message;
-      }
-    }
+    const errorMessage = formatApiError(error);
+
     return (
       <main className="container mx-auto px-4 py-8">
         <Error message={errorMessage} />

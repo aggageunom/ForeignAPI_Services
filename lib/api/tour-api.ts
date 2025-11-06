@@ -76,6 +76,7 @@ async function fetchTourApi<T>(
     ...COMMON_PARAMS,
     ...Object.fromEntries(
       Object.entries(params).filter(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         ([_, value]) => value !== undefined && value !== null && value !== "",
       ) as [string, string | number][],
     ),
@@ -155,7 +156,7 @@ export async function getAreaCode(areaCode?: string): Promise<AreaCode[]> {
     params.areaCode = areaCode;
   }
 
-  return fetchTourApi<AreaCode>("/areaCode2", params);
+  return fetchTourApi<AreaCode[]>("/areaCode2", params);
 }
 
 /**
@@ -185,7 +186,7 @@ export async function getAreaBasedList(
     params.contentTypeId = contentTypeId;
   }
 
-  return fetchTourApi<TourItem>("/areaBasedList2", params);
+  return fetchTourApi<TourItem[]>("/areaBasedList2", params);
 }
 
 /**
@@ -222,7 +223,7 @@ export async function searchKeyword(
     params.contentTypeId = contentTypeId;
   }
 
-  return fetchTourApi<TourItem>("/searchKeyword2", params);
+  return fetchTourApi<TourItem[]>("/searchKeyword2", params);
 }
 
 /**
@@ -235,7 +236,7 @@ export async function getTourDetail(contentId: string): Promise<TourDetail> {
     throw new Error("콘텐츠 ID가 필요합니다.");
   }
 
-  const results = await fetchTourApi<TourDetail>("/detailCommon2", {
+  const results = await fetchTourApi<TourDetail[]>("/detailCommon2", {
     contentId,
   });
 
@@ -262,7 +263,7 @@ export async function getTourIntro(
     throw new Error("콘텐츠 ID와 타입 ID가 필요합니다.");
   }
 
-  const results = await fetchTourApi<TourIntro>("/detailIntro2", {
+  const results = await fetchTourApi<TourIntro[]>("/detailIntro2", {
     contentId,
     contentTypeId,
   });
@@ -286,7 +287,7 @@ export async function getTourImages(contentId: string): Promise<TourImage[]> {
     throw new Error("콘텐츠 ID가 필요합니다.");
   }
 
-  return fetchTourApi<TourImage>("/detailImage2", {
+  return fetchTourApi<TourImage[]>("/detailImage2", {
     contentId,
   });
 }

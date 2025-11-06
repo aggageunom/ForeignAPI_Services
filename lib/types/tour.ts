@@ -90,6 +90,9 @@ export interface TourDetail {
   firstimage2?: string;
   mapx: string;
   mapy: string;
+  cat1?: string; // 대분류
+  cat2?: string; // 중분류
+  cat3?: string; // 소분류
   createdtime?: string;
   modifiedtime?: string;
 }

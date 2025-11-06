@@ -23,7 +23,6 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import {
   MapPin,
   Phone,
@@ -158,7 +157,7 @@ export function DetailInfo({ detail, className }: DetailInfoProps) {
     }
 
     // HTML 태그 제거
-    let cleaned = tel.replace(/<[^>]*>/g, "").trim();
+    const cleaned = tel.replace(/<[^>]*>/g, "").trim();
 
     // 공백, 하이픈, 괄호 등 제거 (선택사항 - 실제 전화번호 형식 유지)
     // cleaned = cleaned.replace(/[\s\-\(\)]/g, "");
@@ -171,15 +170,6 @@ export function DetailInfo({ detail, className }: DetailInfoProps) {
   };
 
   const phoneNumber = normalizePhoneNumber(detail.tel);
-
-  /**
-   * 전화번호 클릭 핸들러
-   */
-  const handlePhoneClick = (tel: string) => {
-    // 전화번호 형식 정리 (공백 제거)
-    const cleanTel = tel.replace(/\s/g, "");
-    window.location.href = `tel:${cleanTel}`;
-  };
 
   // 디버깅: 전화번호 로깅
   if (process.env.NODE_ENV === "development") {

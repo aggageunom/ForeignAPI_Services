@@ -153,7 +153,7 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
             className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           >
             <option value="">전체</option>
-            {Object.entries(CONTENT_TYPE).map(([key, value]) => (
+            {Object.values(CONTENT_TYPE).map((value) => (
               <option key={value} value={value}>
                 {CONTENT_TYPE_NAME[value as keyof typeof CONTENT_TYPE_NAME]}
               </option>

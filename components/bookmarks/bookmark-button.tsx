@@ -39,7 +39,7 @@ export function BookmarkButton({
   className,
   size = "default",
 }: BookmarkButtonProps) {
-  const { isSignedIn, userId } = useAuth();
+  const { isSignedIn } = useAuth();
   const [bookmarked, setBookmarked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);

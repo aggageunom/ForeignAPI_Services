@@ -6,10 +6,10 @@
  * 검색창이 헤더에 통합되어 있습니다.
  */
 
+import { Suspense } from "react";
 import { SignedOut, SignInButton, SignedIn, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import React from "react";
-import { Bookmark, Search } from "lucide-react";
+import { Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TourSearch } from "@/components/tour-search";
 
@@ -26,7 +26,16 @@ const Navbar = () => {
 
         {/* 검색창 (데스크톱) */}
         <div className="hidden flex-1 max-w-md mx-8 lg:block">
-          <TourSearch />
+          <Suspense
+            fallback={
+              <div
+                className="h-10 w-full animate-pulse rounded-md bg-muted"
+                aria-hidden
+              />
+            }
+          >
+            <TourSearch />
+          </Suspense>
         </div>
 
         {/* 우측 네비게이션 */}
@@ -60,7 +69,16 @@ const Navbar = () => {
       {/* 모바일 검색창 */}
       <div className="border-t lg:hidden">
         <div className="container px-4 py-3">
-          <TourSearch />
+          <Suspense
+            fallback={
+              <div
+                className="h-10 w-full animate-pulse rounded-md bg-muted"
+                aria-hidden
+              />
+            }
+          >
+            <TourSearch />
+          </Suspense>
         </div>
       </div>
     </header>
