@@ -18,6 +18,7 @@
 
 "use client";
 
+import { memo } from "react";
 import { TourCard } from "@/components/tour-card";
 import { TourListSkeleton } from "@/components/ui/skeleton";
 import type { TourItem } from "@/lib/types/tour";
@@ -29,7 +30,7 @@ interface TourListProps {
   className?: string;
 }
 
-export function TourList({ tours, isLoading, className }: TourListProps) {
+function TourListComponent({ tours, isLoading, className }: TourListProps) {
   if (isLoading) {
     return <TourListSkeleton count={9} />;
   }
@@ -65,3 +66,6 @@ export function TourList({ tours, isLoading, className }: TourListProps) {
     </div>
   );
 }
+
+// React.memo로 불필요한 리렌더링 방지
+export const TourList = memo(TourListComponent);

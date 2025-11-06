@@ -134,7 +134,7 @@ supabase/migrations/20241030014800_create_users_table.sql
 
 `.env.example` 참고하여 `.env` 파일 생성:
 
-```bash
+````bash
 # Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
@@ -147,7 +147,10 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_STORAGE_BUCKET=uploads
-```
+
+# Tour API (한국관광공사)
+NEXT_PUBLIC_TOUR_API_KEY=
+# 또는 TOUR_API_KEY= (서버 사이드용)
 
 ## Development Guidelines
 
@@ -189,7 +192,7 @@ const searchParams = await props.searchParams;
 
 // Server Component 우선
 // 'use client'는 필요한 경우에만
-```
+````
 
 ## Key Files
 

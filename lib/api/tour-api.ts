@@ -97,9 +97,12 @@ async function fetchTourApi<T>(
     });
 
     if (!response.ok) {
-      throw new Error(
-        `API 요청 실패: ${response.status} ${response.statusText}`,
-      );
+      const statusText = response.statusText || "알 수 없는 오류";
+      const error = new Error(
+        `API 요청 실패: ${response.status} ${statusText}`,
+      ) as Error & { status: number };
+      error.status = response.status;
+      throw error;
     }
 
     const data: ApiResponse<T> | ApiError = await response.json();
@@ -108,7 +111,11 @@ async function fetchTourApi<T>(
     if ("response" in data && data.response.header.resultCode !== "0000") {
       const errorMsg = data.response.header.resultMsg;
       console.error("API Error:", errorMsg);
-      throw new Error(`API 에러: ${errorMsg}`);
+      const error = new Error(`API 에러: ${errorMsg}`) as Error & {
+        apiCode: string;
+      };
+      error.apiCode = data.response.header.resultCode;
+      throw error;
     }
 
     // 성공 응답
@@ -122,6 +129,17 @@ async function fetchTourApi<T>(
   } catch (error) {
     console.error("API 요청 중 오류 발생:", error);
     console.groupEnd();
+
+    // 네트워크 에러 처리
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      const networkError = new Error(
+        "네트워크 연결을 확인해주세요. 인터넷 연결이 끊어졌을 수 있습니다.",
+      );
+      (networkError as Error & { isNetworkError: boolean }).isNetworkError =
+        true;
+      throw networkError;
+    }
+
     throw error;
   }
 }
