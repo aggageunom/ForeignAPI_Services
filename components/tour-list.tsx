@@ -28,9 +28,17 @@ interface TourListProps {
   tours: TourItem[];
   isLoading?: boolean;
   className?: string;
+  onTourClick?: (tour: TourItem) => void;
+  onTourHover?: (tour: TourItem | null) => void;
 }
 
-function TourListComponent({ tours, isLoading, className }: TourListProps) {
+function TourListComponent({
+  tours,
+  isLoading,
+  className,
+  onTourClick,
+  onTourHover,
+}: TourListProps) {
   if (isLoading) {
     return <TourListSkeleton count={9} />;
   }
@@ -61,7 +69,12 @@ function TourListComponent({ tours, isLoading, className }: TourListProps) {
       )}
     >
       {tours.map((tour) => (
-        <TourCard key={tour.contentid} tour={tour} />
+        <TourCard
+          key={tour.contentid}
+          tour={tour}
+          onTourClick={onTourClick}
+          onTourHover={onTourHover}
+        />
       ))}
     </div>
   );

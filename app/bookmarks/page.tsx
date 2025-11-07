@@ -11,15 +11,14 @@
  * 4. 빈 상태 처리
  *
  * @dependencies
- * - lib/api/bookmark-api.ts: getUserBookmarks
+ * - lib/api/bookmark-api.ts: getUserBookmarks, removeBookmark
  * - lib/api/tour-api.ts: getTourDetail
  * - components/tour-list.tsx: 관광지 목록 컴포넌트
  */
 
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
-import { TourList } from "@/components/tour-list";
-import { Error as ErrorComponent } from "@/components/ui/error";
+import { BookmarksClient } from "./bookmarks-client";
 import { getUserBookmarks } from "@/lib/api/bookmark-api";
 import { getTourDetail } from "@/lib/api/tour-api";
 import type { TourItem } from "@/lib/types/tour";
@@ -42,14 +41,15 @@ export default async function BookmarksPage() {
       throw new Error(errorMessage);
     }
 
-    const contentIds = result.bookmarks;
-    console.log("[BookmarksPage] 북마크 개수:", contentIds.length);
+    const bookmarks = result.bookmarks;
+    console.log("[BookmarksPage] 북마크 개수:", bookmarks.length);
 
     // 각 contentId에 대해 관광지 상세 정보 가져오기
-    const tourPromises = contentIds.map(async (contentId) => {
+    const tourPromises = bookmarks.map(async (bookmark) => {
+      const contentId = bookmark.contentId;
       try {
         const detail = await getTourDetail(contentId);
-        // TourItem 형태로 변환
+        // TourItem 형태로 변환 (북마크 생성일을 modifiedtime으로 사용)
         const tourItem: TourItem = {
           contentid: detail.contentid,
           contenttypeid: detail.contenttypeid,
@@ -62,7 +62,7 @@ export default async function BookmarksPage() {
           firstimage: detail.firstimage,
           firstimage2: detail.firstimage2,
           tel: detail.tel,
-          modifiedtime: detail.modifiedtime || new Date().toISOString(),
+          modifiedtime: bookmark.createdAt || new Date().toISOString(),
         };
         return tourItem;
       } catch (error) {
@@ -80,40 +80,18 @@ export default async function BookmarksPage() {
 
     console.log("[BookmarksPage] 관광지 정보 로드 완료:", tours.length, "개");
 
-    return (
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">내 북마크</h1>
-          <p className="mt-2 text-muted-foreground">
-            북마크한 관광지 {tours.length}개
-          </p>
-        </div>
-
-        {tours.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-4 py-16">
-            <p className="text-lg font-semibold text-muted-foreground">
-              북마크한 관광지가 없습니다.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              관광지를 북마크하면 여기서 확인할 수 있습니다.
-            </p>
-          </div>
-        ) : (
-          <TourList tours={tours} />
-        )}
-      </main>
-    );
+    return <BookmarksClient initialTours={tours} />;
   } catch (error) {
     console.error("[BookmarksPage] 오류 발생:", error);
     return (
       <main className="container mx-auto px-4 py-8">
-        <ErrorComponent
-          message={
-            error instanceof Error
+        <div className="text-center py-16">
+          <p className="text-lg font-semibold text-destructive">
+            {error instanceof Error
               ? error.message
-              : "북마크 목록을 불러오는 중 오류가 발생했습니다."
-          }
-        />
+              : "북마크 목록을 불러오는 중 오류가 발생했습니다."}
+          </p>
+        </div>
       </main>
     );
   }

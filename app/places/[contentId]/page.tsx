@@ -24,6 +24,7 @@ import { Error } from "@/components/ui/error";
 import { DetailInfo } from "@/components/tour-detail/detail-info";
 import { DetailIntro } from "@/components/tour-detail/detail-intro";
 import { DetailGallery } from "@/components/tour-detail/detail-gallery";
+import { DetailMap } from "@/components/tour-detail/detail-map";
 import { ShareButton } from "@/components/tour-detail/share-button";
 import { BookmarkButton } from "@/components/bookmarks/bookmark-button";
 import { getTourDetail, getTourIntro, getTourImages } from "@/lib/api/tour-api";
@@ -46,7 +47,7 @@ export async function generateMetadata({
       detail.overview?.substring(0, 100) || "관광지 상세 정보를 확인하세요.";
 
     return {
-      title: `${detail.title} - My Trip`,
+      title: `${detail.title} - JLG Trip`,
       description,
       openGraph: {
         title: detail.title,
@@ -67,7 +68,7 @@ export async function generateMetadata({
     };
   } catch {
     return {
-      title: "관광지 상세 - My Trip",
+      title: "관광지 상세 - JLG Trip",
       description: "관광지 상세 정보를 확인하세요.",
     };
   }
@@ -144,19 +145,12 @@ export default async function PlacePage({ params }: PlacePageProps) {
           </section>
 
           {/* 지도 섹션 */}
-          <section className="mb-8">
-            <h2 className="mb-4 text-2xl font-semibold">위치</h2>
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-              <p className="text-muted-foreground">
-                지도는 네이버 지도 API 연동 후 구현 예정입니다.
-              </p>
-              {detailData.mapx && detailData.mapy && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  좌표: {detailData.mapx}, {detailData.mapy}
-                </p>
-              )}
-            </div>
-          </section>
+          {detailData.mapx && detailData.mapy && (
+            <section className="mb-8">
+              <h2 className="mb-4 text-2xl font-semibold">위치</h2>
+              <DetailMap detail={detailData} />
+            </section>
+          )}
         </div>
       </main>
     );

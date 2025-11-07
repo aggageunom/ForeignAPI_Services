@@ -191,8 +191,9 @@ export interface Coordinates {
 
 /**
  * 좌표 변환 함수
- * @param mapx KATEC 경도 (정수형)
- * @param mapy KATEC 위도 (정수형)
+ * 한국관광공사 API는 WGS84 좌표계를 사용하며, 이미 올바른 경도/위도 값을 제공합니다.
+ * @param mapx WGS84 경도 (문자열 또는 숫자)
+ * @param mapy WGS84 위도 (문자열 또는 숫자)
  * @returns WGS84 좌표계 좌표
  */
 export function convertCoordinates(
@@ -201,8 +202,10 @@ export function convertCoordinates(
 ): Coordinates {
   const x = typeof mapx === "string" ? parseFloat(mapx) : mapx;
   const y = typeof mapy === "string" ? parseFloat(mapy) : mapy;
+
+  // 한국관광공사 API는 이미 WGS84 좌표계를 사용하므로 변환 불필요
   return {
-    lng: x / 10000000,
-    lat: y / 10000000,
+    lng: x,
+    lat: y,
   };
 }

@@ -17,6 +17,7 @@
 
 import type { Metadata } from "next";
 import { TourList } from "@/components/tour-list";
+import { TourMapView } from "@/components/tour-map-view";
 import { TourFilters } from "@/components/tour-filters";
 import { TourSort } from "@/components/tour-sort";
 import { TourPagination } from "@/components/tour-pagination";
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
   description:
     "전국의 관광지 정보를 지역별, 타입별로 검색하고 상세 정보를 확인하세요. 한국관광공사 공공 API 기반의 신뢰할 수 있는 관광지 정보 서비스입니다.",
   openGraph: {
-    title: "My Trip - 한국 관광지 정보 서비스",
+    title: "JLG Trip - 한국 관광지 정보 서비스",
     description:
       "전국의 관광지 정보를 쉽게 검색하고, 지도에서 확인하며, 상세 정보를 조회할 수 있는 웹 서비스",
     images: ["/og-image.png"],
@@ -203,8 +204,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <TourSort />
           </div>
 
-          {/* 관광지 목록 */}
-          <TourList tours={tours} />
+          {/* 관광지 목록 및 지도 */}
+          <TourMapView tours={tours} />
 
           {/* 페이지네이션 */}
           {totalPages > 1 && (

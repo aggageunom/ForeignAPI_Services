@@ -232,11 +232,11 @@ export async function isBookmarked(contentId: string): Promise<boolean> {
 
 /**
  * 사용자의 북마크 목록 조회
- * @returns 북마크 목록 (contentId 배열)
+ * @returns 북마크 목록 (contentId와 created_at 포함)
  */
 export async function getUserBookmarks(): Promise<{
   success: boolean;
-  bookmarks?: string[];
+  bookmarks?: Array<{ contentId: string; createdAt: string }>;
   error?: string;
 }> {
   try {
@@ -275,7 +275,7 @@ export async function getUserBookmarks(): Promise<{
     // 북마크 목록 조회
     const { data: bookmarks, error: bookmarksError } = await supabase
       .from("bookmarks")
-      .select("content_id")
+      .select("content_id, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -289,12 +289,15 @@ export async function getUserBookmarks(): Promise<{
       };
     }
 
-    const contentIds = bookmarks.map((b) => b.content_id);
-    console.log(`북마크 목록 조회 성공: ${contentIds.length}개`);
+    const bookmarksWithDate = bookmarks.map((b) => ({
+      contentId: b.content_id,
+      createdAt: b.created_at,
+    }));
+    console.log(`북마크 목록 조회 성공: ${bookmarksWithDate.length}개`);
     console.groupEnd();
     return {
       success: true,
-      bookmarks: contentIds,
+      bookmarks: bookmarksWithDate,
     };
   } catch (error) {
     console.error("[Bookmark API] 북마크 목록 조회 오류:", error);

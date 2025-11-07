@@ -58,9 +58,16 @@ function parseDateString(dateString: string): Date {
 interface TourCardProps {
   tour: TourItem;
   className?: string;
+  onTourClick?: (tour: TourItem) => void;
+  onTourHover?: (tour: TourItem | null) => void;
 }
 
-function TourCardComponent({ tour, className }: TourCardProps) {
+function TourCardComponent({
+  tour,
+  className,
+  onTourClick,
+  onTourHover,
+}: TourCardProps) {
   const [imageError, setImageError] = useState(false);
 
   // 이미지 URL과 콘텐츠 타입명을 useMemo로 최적화
@@ -82,6 +89,21 @@ function TourCardComponent({ tour, className }: TourCardProps) {
         "group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-md transition-all duration-300 hover:shadow-xl hover:scale-[1.02]",
         className,
       )}
+      onClick={(e) => {
+        if (onTourClick) {
+          onTourClick(tour);
+        }
+      }}
+      onMouseEnter={() => {
+        if (onTourHover) {
+          onTourHover(tour);
+        }
+      }}
+      onMouseLeave={() => {
+        if (onTourHover) {
+          onTourHover(null);
+        }
+      }}
     >
       {/* 썸네일 이미지 */}
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
