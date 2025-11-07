@@ -64,6 +64,7 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
 
   const currentAreaCode = searchParams.get("areaCode") || "";
   const currentContentTypeId = searchParams.get("contentTypeId") || "";
+  const petFriendly = searchParams.get("petFriendly") === "true";
 
   // 실제 지역코드가 있으면 사용, 없으면 기본값 사용
   const availableAreaCodes =
@@ -95,10 +96,24 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
   };
 
   /**
+   * 반려동물 필터 토글 핸들러
+   */
+  const handlePetFriendlyToggle = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (petFriendly) {
+      params.delete("petFriendly");
+    } else {
+      params.set("petFriendly", "true");
+    }
+    params.delete("page");
+    router.push(`/?${params.toString()}`);
+  };
+
+  /**
    * 필터가 적용되어 있는지 확인
    */
   const hasActiveFilters =
-    currentAreaCode !== "" || currentContentTypeId !== "";
+    currentAreaCode !== "" || currentContentTypeId !== "" || petFriendly;
 
   return (
     <div
@@ -162,9 +177,52 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
         </div>
       </div>
 
+      {/* 반려동물 동반 가능 필터 */}
+      <div className="space-y-2 border-t pt-4">
+        <Label
+          htmlFor="pet-friendly-filter"
+          className="flex items-center gap-2"
+        >
+          <span className="text-lg">🐾</span>
+          반려동물 동반 가능
+        </Label>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handlePetFriendlyToggle}
+            className={cn(
+              "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+              petFriendly
+                ? "bg-green-600 dark:bg-green-500"
+                : "bg-gray-200 dark:bg-gray-700",
+            )}
+            role="switch"
+            aria-checked={petFriendly}
+            aria-label="반려동물 동반 가능 필터"
+          >
+            <span
+              className={cn(
+                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                petFriendly ? "translate-x-6" : "translate-x-1",
+              )}
+            />
+          </button>
+          <span className="text-sm text-muted-foreground">
+            {petFriendly
+              ? "반려동물 동반 가능한 관광지만 표시"
+              : "모든 관광지 표시"}
+          </span>
+        </div>
+        {petFriendly && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+            ⚠️ 반려동물 정보는 각 관광지 상세페이지에서 확인할 수 있습니다.
+          </p>
+        )}
+      </div>
+
       {/* 활성 필터 표시 */}
       {hasActiveFilters && (
-        <div className="flex flex-wrap gap-2 pt-2">
+        <div className="flex flex-wrap gap-2 pt-2 border-t">
           {currentAreaCode && (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
               지역:{" "}
@@ -190,6 +248,19 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
                 onClick={() => handleFilterChange("contentTypeId", "")}
                 className="ml-1 hover:text-primary/80"
                 aria-label="타입 필터 제거"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {petFriendly && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-1 text-xs text-green-700 dark:text-green-400">
+              <span>🐾</span>
+              반려동물 동반 가능
+              <button
+                onClick={handlePetFriendlyToggle}
+                className="ml-1 hover:text-green-600 dark:hover:text-green-300"
+                aria-label="반려동물 필터 제거"
               >
                 <X className="h-3 w-3" />
               </button>

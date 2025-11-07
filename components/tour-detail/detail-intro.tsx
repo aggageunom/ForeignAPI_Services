@@ -39,6 +39,20 @@ interface DetailIntroProps {
 }
 
 /**
+ * HTML 태그를 제거하고 줄바꿈을 처리하는 헬퍼 함수
+ */
+function sanitizeText(text: string): string {
+  if (!text) return "";
+
+  // <br>, <br/>, <br /> 태그를 줄바꿈으로 변환
+  let sanitized = text
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?[^>]+(>|$)/g, ""); // 나머지 HTML 태그 제거
+
+  return sanitized.trim();
+}
+
+/**
  * 정보 항목을 표시하는 헬퍼 컴포넌트
  */
 function InfoItem({
@@ -54,6 +68,8 @@ function InfoItem({
     return null;
   }
 
+  const sanitizedValue = sanitizeText(value);
+
   return (
     <div className="flex items-start gap-3">
       <div className="mt-0.5 shrink-0">
@@ -64,7 +80,7 @@ function InfoItem({
           {label}
         </div>
         <div className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">
-          {value.trim()}
+          {sanitizedValue}
         </div>
       </div>
     </div>
@@ -87,8 +103,10 @@ function BooleanInfoItem({
     return null;
   }
 
+  const sanitizedValue = sanitizeText(value);
+
   // "Y", "y", "가능", "있음" 등의 값을 true로 간주
-  const isPositive = /^(y|yes|가능|있음|있습니다|ok|o)$/i.test(value.trim());
+  const isPositive = /^(y|yes|가능|있음|있습니다|ok|o)$/i.test(sanitizedValue);
 
   return (
     <div className="flex items-center gap-3">
@@ -105,7 +123,7 @@ function BooleanInfoItem({
               : "text-foreground/80",
           )}
         >
-          {isPositive ? "가능" : value.trim()}
+          {isPositive ? "가능" : sanitizedValue}
         </div>
       </div>
     </div>
@@ -178,10 +196,10 @@ export function DetailIntro({ intro, className }: DetailIntroProps) {
                 <div className="mb-1 text-sm font-semibold text-foreground">
                   체크인/체크아웃
                 </div>
-                <div className="text-sm leading-relaxed text-foreground/80">
-                  체크인: {intro.checkintime}
-                  <br />
-                  체크아웃: {intro.checkouttime}
+                <div className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">
+                  {sanitizeText(
+                    `체크인: ${intro.checkintime}\n체크아웃: ${intro.checkouttime}`,
+                  )}
                 </div>
               </div>
             </div>
@@ -215,12 +233,7 @@ export function DetailIntro({ intro, className }: DetailIntroProps) {
             value={intro.expagerange}
           />
 
-          {/* 유모차/반려동물 동반 가능 */}
-          <BooleanInfoItem
-            icon={Dog}
-            label="반려동물 동반"
-            value={intro.chkpet}
-          />
+          {/* 반려동물 정보는 별도 카드(DetailPetTour)로 표시되므로 여기서는 제거 */}
 
           {/* 행사 기간 (축제/행사) */}
           {intro.eventstartdate && intro.eventenddate && (
@@ -232,8 +245,10 @@ export function DetailIntro({ intro, className }: DetailIntroProps) {
                 <div className="mb-1 text-sm font-semibold text-foreground">
                   행사 기간
                 </div>
-                <div className="text-sm leading-relaxed text-foreground/80">
-                  {intro.eventstartdate} ~ {intro.eventenddate}
+                <div className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">
+                  {sanitizeText(
+                    `${intro.eventstartdate} ~ ${intro.eventenddate}`,
+                  )}
                 </div>
               </div>
             </div>

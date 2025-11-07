@@ -71,6 +71,26 @@ export function isNetworkError(error: unknown): boolean {
 }
 
 /**
+ * 서버 에러인지 확인합니다 (500, 502, 503 등).
+ */
+export function isServerError(error: unknown): boolean {
+  if (
+    error &&
+    typeof error === "object" &&
+    "isServerError" in error &&
+    typeof error.isServerError === "boolean"
+  ) {
+    return error.isServerError;
+  }
+
+  if (isApiError(error)) {
+    return error.status >= 500 && error.status < 600;
+  }
+
+  return false;
+}
+
+/**
  * API 에러를 사용자 친화적인 메시지로 변환합니다.
  */
 export function formatApiError(error: unknown): string {
@@ -79,6 +99,14 @@ export function formatApiError(error: unknown): string {
   // 네트워크 에러
   if (isNetworkError(error)) {
     return "네트워크 연결을 확인해주세요. 인터넷 연결이 끊어졌을 수 있습니다.";
+  }
+
+  // 서버 에러 (우선 처리)
+  if (isServerError(error)) {
+    return (
+      message ||
+      "한국관광공사 API 서버가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요."
+    );
   }
 
   // API 에러
@@ -97,7 +125,7 @@ export function formatApiError(error: unknown): string {
       case 500:
       case 502:
       case 503:
-        return "서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        return "한국관광공사 API 서버가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.";
       default:
         return message || "API 요청 중 오류가 발생했습니다.";
     }

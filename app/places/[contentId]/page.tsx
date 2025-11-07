@@ -27,7 +27,13 @@ import { DetailGallery } from "@/components/tour-detail/detail-gallery";
 import { DetailMap } from "@/components/tour-detail/detail-map";
 import { ShareButton } from "@/components/tour-detail/share-button";
 import { BookmarkButton } from "@/components/bookmarks/bookmark-button";
-import { getTourDetail, getTourIntro, getTourImages } from "@/lib/api/tour-api";
+import { DetailPetTour } from "@/components/tour-detail/detail-pet-tour";
+import {
+  getTourDetail,
+  getTourIntro,
+  getTourImages,
+  getPetTourInfo,
+} from "@/lib/api/tour-api";
 import type { Metadata } from "next";
 
 interface PlacePageProps {
@@ -84,20 +90,37 @@ export default async function PlacePage({ params }: PlacePageProps) {
     // 병렬로 데이터 로드
     const detailResult = await getTourDetail(contentId);
 
-    const [intro, images] = await Promise.allSettled([
+    const [intro, images, petInfo] = await Promise.allSettled([
       getTourIntro(detailResult.contentid, detailResult.contenttypeid),
       getTourImages(contentId),
+      getPetTourInfo(contentId),
     ]);
 
     const detailData = detailResult;
     const introData = intro.status === "fulfilled" ? intro.value : null;
     const imagesData = images.status === "fulfilled" ? images.value : [];
+    const petInfoData = petInfo.status === "fulfilled" ? petInfo.value : null;
+
+    // 반려동물 정보 로깅
+    if (petInfo.status === "rejected") {
+      console.warn("[PlacePage] 반려동물 정보 로드 실패:", petInfo.reason);
+    } else if (petInfoData) {
+      console.log("[PlacePage] 반려동물 정보 로드 성공:", {
+        contentid: petInfoData.contentid,
+        chkpetleash: petInfoData.chkpetleash,
+        chkpetsize: petInfoData.chkpetsize,
+        chkpetplace: petInfoData.chkpetplace,
+      });
+    } else {
+      console.log("[PlacePage] 반려동물 정보 없음 (null 반환)");
+    }
 
     console.log("[PlacePage] 데이터 로드 완료:", {
       contentId,
       title: detailData.title,
       hasIntro: !!introData,
       imagesCount: imagesData.length,
+      hasPetInfo: !!petInfoData,
     });
     console.groupEnd();
 
@@ -134,6 +157,11 @@ export default async function PlacePage({ params }: PlacePageProps) {
               <DetailIntro intro={introData} />
             </section>
           )}
+
+          {/* 반려동물 정보 섹션 - 정보가 없어도 항상 표시 */}
+          <section className="mb-8">
+            <DetailPetTour petInfo={petInfoData} />
+          </section>
 
           {/* 이미지 갤러리 섹션 */}
           <section className="mb-8">

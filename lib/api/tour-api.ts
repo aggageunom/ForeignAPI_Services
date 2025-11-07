@@ -29,6 +29,7 @@ import type {
   TourDetail,
   TourIntro,
   TourImage,
+  PetTourInfo,
   AreaCode,
   ContentTypeId,
 } from "@/lib/types/tour";
@@ -64,11 +65,24 @@ function getApiKey(): string {
 }
 
 /**
- * API 요청 헬퍼 함수
+ * 지연 함수 (재시도용)
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * API 요청 헬퍼 함수 (재시도 로직 포함)
+ * @param endpoint API 엔드포인트
+ * @param params 요청 파라미터
+ * @param retries 재시도 횟수 (기본: 3)
+ * @param retryDelay 재시도 지연 시간(ms) (기본: 1000)
  */
 async function fetchTourApi<T>(
   endpoint: string,
   params: Record<string, string | number | undefined>,
+  retries: number = 3,
+  retryDelay: number = 1000,
 ): Promise<T> {
   const apiKey = getApiKey();
   const searchParams = new URLSearchParams({
@@ -87,62 +101,169 @@ async function fetchTourApi<T>(
   console.group(`[Tour API] ${endpoint}`);
   console.log("Request URL:", url.replace(apiKey, "***"));
 
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-      // Next.js에서 캐싱 제어 (선택 사항)
-      next: { revalidate: 3600 }, // 1시간 캐시
-    });
+  let lastError: Error | null = null;
 
-    if (!response.ok) {
-      const statusText = response.statusText || "알 수 없는 오류";
-      const error = new Error(
-        `API 요청 실패: ${response.status} ${statusText}`,
-      ) as Error & { status: number };
-      error.status = response.status;
-      throw error;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      if (attempt > 0) {
+        // 재시도 전 지연 (exponential backoff)
+        const delayMs = retryDelay * Math.pow(2, attempt - 1);
+        console.log(
+          `[Tour API] 재시도 ${attempt}/${retries} (${delayMs}ms 후)`,
+        );
+        await delay(delayMs);
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+        // Next.js에서 캐싱 제어 (선택 사항)
+        next: { revalidate: 3600 }, // 1시간 캐시
+      });
+
+      // 503, 502, 500 등 서버 에러는 재시도
+      if (!response.ok) {
+        const status = response.status;
+        const statusText = response.statusText || "알 수 없는 오류";
+
+        // 재시도 가능한 에러 (503, 502, 500, 429)
+        if (
+          (status === 503 ||
+            status === 502 ||
+            status === 500 ||
+            status === 429) &&
+          attempt < retries
+        ) {
+          console.warn(
+            `[Tour API] 서버 에러 ${status} 발생, 재시도 예정... (${
+              attempt + 1
+            }/${retries})`,
+          );
+          lastError = new Error(
+            `API 요청 실패: ${status} ${statusText}`,
+          ) as Error & { status: number };
+          (lastError as Error & { status: number }).status = status;
+          continue; // 재시도
+        }
+
+        // 재시도 불가능한 에러 또는 재시도 횟수 초과
+        const error = new Error(
+          `API 요청 실패: ${status} ${statusText}`,
+        ) as Error & { status: number };
+        error.status = status;
+        throw error;
+      }
+
+      const data: ApiResponse<T> | ApiError = await response.json();
+
+      // 에러 응답 체크
+      if ("response" in data && data.response.header.resultCode !== "0000") {
+        const errorMsg = data.response.header.resultMsg;
+        const apiCode = data.response.header.resultCode;
+
+        // 일부 API 에러는 재시도 가능
+        if (
+          (apiCode === "SERVICE_ERROR" ||
+            apiCode === "TIMEOUT" ||
+            errorMsg.includes("일시적")) &&
+          attempt < retries
+        ) {
+          console.warn(
+            `[Tour API] API 에러 ${apiCode} 발생, 재시도 예정... (${
+              attempt + 1
+            }/${retries})`,
+          );
+          lastError = new Error(`API 에러: ${errorMsg}`) as Error & {
+            apiCode: string;
+          };
+          (lastError as Error & { apiCode: string }).apiCode = apiCode;
+          continue; // 재시도
+        }
+
+        console.error("API Error:", errorMsg);
+        const error = new Error(`API 에러: ${errorMsg}`) as Error & {
+          apiCode: string;
+        };
+        error.apiCode = apiCode;
+        throw error;
+      }
+
+      // 성공 응답
+      const items = (data as ApiResponse<T>).response.body.items.item;
+      const result = Array.isArray(items) ? items : items ? [items] : [];
+
+      if (attempt > 0) {
+        console.log(`Success after ${attempt} retries: ${result.length} items`);
+      } else {
+        console.log(`Success: ${result.length} items`);
+      }
+      console.groupEnd();
+
+      return result as T;
+    } catch (error) {
+      lastError = error as Error;
+
+      // 네트워크 에러는 재시도 가능
+      if (
+        error instanceof TypeError &&
+        error.message.includes("fetch") &&
+        attempt < retries
+      ) {
+        console.warn(
+          `[Tour API] 네트워크 에러 발생, 재시도 예정... (${
+            attempt + 1
+          }/${retries})`,
+        );
+        continue; // 재시도
+      }
+
+      // 재시도 불가능한 에러 또는 재시도 횟수 초과
+      if (attempt === retries) {
+        console.error(
+          `[Tour API] 최대 재시도 횟수(${retries}) 초과, 에러 발생:`,
+          error,
+        );
+        console.groupEnd();
+
+        // 네트워크 에러 처리
+        if (error instanceof TypeError && error.message.includes("fetch")) {
+          const networkError = new Error(
+            "네트워크 연결을 확인해주세요. 인터넷 연결이 끊어졌을 수 있습니다.",
+          );
+          (networkError as Error & { isNetworkError: boolean }).isNetworkError =
+            true;
+          throw networkError;
+        }
+
+        // 서버 에러 처리
+        if (
+          error &&
+          typeof error === "object" &&
+          "status" in error &&
+          typeof error.status === "number"
+        ) {
+          const status = error.status;
+          if (status === 503 || status === 502 || status === 500) {
+            const serverError = new Error(
+              "한국관광공사 API 서버가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.",
+            ) as Error & { status: number; isServerError: boolean };
+            serverError.status = status;
+            (serverError as Error & { isServerError: boolean }).isServerError =
+              true;
+            throw serverError;
+          }
+        }
+
+        throw error;
+      }
     }
-
-    const data: ApiResponse<T> | ApiError = await response.json();
-
-    // 에러 응답 체크
-    if ("response" in data && data.response.header.resultCode !== "0000") {
-      const errorMsg = data.response.header.resultMsg;
-      console.error("API Error:", errorMsg);
-      const error = new Error(`API 에러: ${errorMsg}`) as Error & {
-        apiCode: string;
-      };
-      error.apiCode = data.response.header.resultCode;
-      throw error;
-    }
-
-    // 성공 응답
-    const items = (data as ApiResponse<T>).response.body.items.item;
-    const result = Array.isArray(items) ? items : items ? [items] : [];
-
-    console.log(`Success: ${result.length} items`);
-    console.groupEnd();
-
-    return result as T;
-  } catch (error) {
-    console.error("API 요청 중 오류 발생:", error);
-    console.groupEnd();
-
-    // 네트워크 에러 처리
-    if (error instanceof TypeError && error.message.includes("fetch")) {
-      const networkError = new Error(
-        "네트워크 연결을 확인해주세요. 인터넷 연결이 끊어졌을 수 있습니다.",
-      );
-      (networkError as Error & { isNetworkError: boolean }).isNetworkError =
-        true;
-      throw networkError;
-    }
-
-    throw error;
   }
+
+  // 이 코드는 실행되지 않아야 하지만 타입 안전성을 위해 추가
+  console.groupEnd();
+  throw lastError || new Error("알 수 없는 오류가 발생했습니다.");
 }
 
 /**
@@ -290,4 +411,56 @@ export async function getTourImages(contentId: string): Promise<TourImage[]> {
   return fetchTourApi<TourImage[]>("/detailImage2", {
     contentId,
   });
+}
+
+/**
+ * 반려동물 동반 여행 정보 조회 (detailPetTour2)
+ * @param contentId 콘텐츠 ID
+ * @returns 반려동물 동반 여행 정보
+ */
+export async function getPetTourInfo(
+  contentId: string,
+): Promise<PetTourInfo | null> {
+  if (!contentId) {
+    throw new Error("콘텐츠 ID가 필요합니다.");
+  }
+
+  console.group(`[getPetTourInfo] 반려동물 동반 정보 조회 시작`);
+  console.log("Content ID:", contentId);
+
+  try {
+    const results = await fetchTourApi<PetTourInfo[]>("/detailPetTour2", {
+      contentId,
+    });
+
+    console.log(`[getPetTourInfo] API 응답 받음: ${results.length}개 결과`);
+
+    if (results.length === 0) {
+      console.log("[getPetTourInfo] 반려동물 정보 없음 (빈 결과)");
+      console.groupEnd();
+      return null;
+    }
+
+    const petInfo = results[0];
+    console.log("[getPetTourInfo] 반려동물 정보:", {
+      contentid: petInfo.contentid,
+      chkpetleash: petInfo.chkpetleash,
+      chkpetsize: petInfo.chkpetsize,
+      chkpetplace: petInfo.chkpetplace,
+      chkpetfee: petInfo.chkpetfee,
+      hasPetInfo: !!petInfo.petinfo,
+      hasParking: !!petInfo.parking,
+    });
+    console.groupEnd();
+
+    return petInfo;
+  } catch (error) {
+    // 반려동물 정보가 없는 경우 null 반환 (에러가 아닌 정상 케이스)
+    console.warn(
+      `[getPetTourInfo] 반려동물 정보 조회 실패 (contentId: ${contentId}):`,
+      error,
+    );
+    console.groupEnd();
+    return null;
+  }
 }

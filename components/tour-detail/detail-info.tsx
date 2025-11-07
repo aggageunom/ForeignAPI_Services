@@ -311,42 +311,26 @@ export function DetailInfo({ detail, className }: DetailInfoProps) {
       </div>
 
       {/* 개요 */}
-      {detail.overview && (
-        <div className="rounded-xl border border-border bg-card p-6 md:p-8 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold text-foreground">개요</h2>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            <p className="whitespace-pre-line text-base leading-relaxed text-foreground/90">
-              {detail.overview}
-            </p>
-          </div>
-        </div>
-      )}
+      {detail.overview &&
+        (() => {
+          // <br> 태그를 줄바꿈으로 변환하고 나머지 HTML 태그 제거
+          const sanitizedOverview = detail.overview
+            .replace(/<br\s*\/?>/gi, "\n")
+            .replace(/<\/?[^>]+(>|$)/g, "");
 
-      {/* 카테고리 정보 (있는 경우) */}
-      {(detail.cat1 || detail.cat2 || detail.cat3) && (
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <div className="mb-3 text-sm font-semibold text-foreground">
-            카테고리
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {detail.cat1 && (
-              <span className="rounded-md bg-muted px-3 py-1.5 text-xs font-medium text-foreground/80">
-                {detail.cat1}
-              </span>
-            )}
-            {detail.cat2 && (
-              <span className="rounded-md bg-muted px-3 py-1.5 text-xs font-medium text-foreground/80">
-                {detail.cat2}
-              </span>
-            )}
-            {detail.cat3 && (
-              <span className="rounded-md bg-muted px-3 py-1.5 text-xs font-medium text-foreground/80">
-                {detail.cat3}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
+          return (
+            <div className="rounded-xl border border-border bg-card p-6 md:p-8 shadow-sm">
+              <h2 className="mb-4 text-xl font-semibold text-foreground">
+                개요
+              </h2>
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <p className="whitespace-pre-line text-base leading-relaxed text-foreground/90">
+                  {sanitizedOverview}
+                </p>
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }

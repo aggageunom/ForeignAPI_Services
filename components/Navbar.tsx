@@ -9,7 +9,7 @@
 import { Suspense } from "react";
 import { SignedOut, SignInButton, SignedIn, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { Bookmark } from "lucide-react";
+import { Bookmark, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TourSearch } from "@/components/tour-search";
 
@@ -50,6 +50,17 @@ const Navbar = () => {
               <Link href="/bookmarks" className="gap-2">
                 <Bookmark className="h-4 w-4" />
                 <span className="hidden md:inline">북마크</span>
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="hidden sm:flex"
+            >
+              <Link href="/stats" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden md:inline">통계</span>
               </Link>
             </Button>
           </SignedIn>

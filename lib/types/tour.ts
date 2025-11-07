@@ -190,6 +190,20 @@ export interface Coordinates {
 }
 
 /**
+ * 반려동물 동반 여행 정보 (detailPetTour2 응답)
+ */
+export interface PetTourInfo {
+  contentid: string;
+  contenttypeid: string;
+  chkpetleash?: string; // 애완동물 동반 여부
+  chkpetsize?: string; // 애완동물 크기
+  chkpetplace?: string; // 입장 가능 장소
+  chkpetfee?: string; // 추가 요금
+  petinfo?: string; // 기타 반려동물 정보
+  parking?: string; // 주차장 정보
+}
+
+/**
  * 좌표 변환 함수
  * 한국관광공사 API는 WGS84 좌표계를 사용하며, 이미 올바른 경도/위도 값을 제공합니다.
  * @param mapx WGS84 경도 (문자열 또는 숫자)

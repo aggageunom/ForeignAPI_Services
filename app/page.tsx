@@ -26,6 +26,8 @@ import {
   getAreaBasedList,
   getAreaCode,
   searchKeyword,
+  getTourIntro,
+  getPetTourInfo,
 } from "@/lib/api/tour-api";
 import type { TourItem } from "@/lib/types/tour";
 import { formatApiError } from "@/lib/utils/error-handler";
@@ -75,6 +77,7 @@ interface HomePageProps {
     keyword?: string;
     page?: string;
     sort?: string;
+    petFriendly?: string;
   }>;
 }
 
@@ -85,6 +88,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const keyword = params.keyword;
   const page = parseInt(params.page || "1", 10);
   const sort = (params.sort || "latest") as "latest" | "name-asc" | "name-desc";
+  const petFriendly = params.petFriendly === "true";
   const numOfRows = 20;
 
   try {
@@ -117,6 +121,76 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         page,
         numOfRows,
       );
+    }
+
+    // 반려동물 필터링 (petFriendly가 true인 경우)
+    if (petFriendly) {
+      console.log(
+        "[HomePage] 반려동물 필터링 시작:",
+        tours.length,
+        "개 관광지 확인",
+      );
+
+      // 각 관광지의 반려동물 정보 확인 (병렬 처리)
+      const petInfoResults = await Promise.allSettled(
+        tours.map(async (tour) => {
+          try {
+            // 먼저 detailPetTour2 API로 확인
+            const petInfo = await getPetTourInfo(tour.contentid);
+            if (petInfo?.chkpetleash) {
+              const isAllowed =
+                petInfo.chkpetleash === "가능" ||
+                petInfo.chkpetleash === "Y" ||
+                petInfo.chkpetleash === "가능함";
+              return { tour, isPetAllowed: isAllowed, source: "petTour" };
+            }
+
+            // detailPetTour2에 정보가 없으면 detailIntro2의 chkpet 확인
+            const intro = await getTourIntro(
+              tour.contentid,
+              tour.contenttypeid,
+            );
+            if (intro?.chkpet) {
+              const isAllowed =
+                intro.chkpet === "Y" ||
+                intro.chkpet === "y" ||
+                intro.chkpet === "가능" ||
+                intro.chkpet === "있음" ||
+                intro.chkpet === "있습니다" ||
+                intro.chkpet === "OK" ||
+                intro.chkpet === "ok" ||
+                intro.chkpet === "O";
+              return { tour, isPetAllowed: isAllowed, source: "intro" };
+            }
+
+            return { tour, isPetAllowed: false, source: "none" };
+          } catch (error) {
+            console.warn(
+              `[HomePage] 반려동물 정보 확인 실패 (${tour.contentid}):`,
+              error,
+            );
+            return { tour, isPetAllowed: false, source: "error" };
+          }
+        }),
+      );
+
+      // "가능"인 관광지만 필터링
+      const filteredTours = petInfoResults
+        .filter(
+          (result) =>
+            result.status === "fulfilled" && result.value.isPetAllowed,
+        )
+        .map((result) =>
+          result.status === "fulfilled" ? result.value.tour : null,
+        )
+        .filter((tour): tour is TourItem => tour !== null);
+
+      console.log("[HomePage] 반려동물 필터링 완료:", {
+        원본: tours.length,
+        필터링후: filteredTours.length,
+      });
+
+      tours = filteredTours;
     }
 
     // 정렬 처리 (클라이언트 사이드)
