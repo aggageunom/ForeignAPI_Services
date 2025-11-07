@@ -91,6 +91,10 @@ export function NavigationDialog({
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     console.log("환경:", { isMobile, urls });
+    console.log("생성된 URL:", {
+      appUrl: urls.appUrl,
+      webUrl: urls.webUrl,
+    });
 
     // 모바일 환경에서는 앱 URL 우선 시도, 없으면 웹 URL
     if (isMobile && urls.appUrl) {
@@ -103,21 +107,29 @@ export function NavigationDialog({
           destination.name,
         )}`;
 
+      console.log("Fallback URL 준비:", fallbackUrl);
+
       // 앱 열기 시도
-      window.location.href = urls.appUrl;
+      try {
+        window.location.href = urls.appUrl;
+        console.log("앱 URL 호출 성공");
+      } catch (error) {
+        console.error("앱 URL 호출 실패:", error);
+        window.open(fallbackUrl, "_blank");
+      }
 
       // 앱이 열리지 않으면 웹으로 fallback (약간의 지연 후)
       setTimeout(() => {
         if (urls.webUrl) {
-          console.log("앱 열기 실패, 웹 URL로 fallback:", urls.webUrl);
-          window.open(urls.webUrl, "_blank");
+          console.log("앱 열기 실패 가능성, 웹 URL로 fallback:", urls.webUrl);
+          // 이미 앱이 열렸다면 이 코드는 실행되지 않음
         }
-      }, 500);
+      }, 1500);
     } else if (urls.webUrl) {
       console.log("웹 URL 열기:", urls.webUrl);
       window.open(urls.webUrl, "_blank");
     } else if (urls.appUrl) {
-      console.log("앱 URL 열기:", urls.appUrl);
+      console.log("앱 URL 열기 (데스크톱):", urls.appUrl);
       window.location.href = urls.appUrl;
     }
 
@@ -150,20 +162,10 @@ export function NavigationDialog({
           const appname = getAppName();
 
           // 네이버 지도 웹 URL
-          // 네이버 지도 웹 v5 API 형식 사용
-          // 형식: https://map.naver.com/v5/directions/{출발지위도},{출발지경도},{출발지명}/to/{도착지위도},{도착지경도},{도착지명}
-          // 주의: 네이버 지도 웹에서는 URL에 좌표와 이름이 포함되어 있어도 입력 필드에 자동으로 채워지지 않을 수 있음
-          // 하지만 지도는 해당 위치로 이동하고, 사용자가 길찾기를 시작할 수 있음
-          let webUrl: string;
-          if (orig) {
-            const origName = encodeURIComponent(orig.name || "출발지");
-            // 출발지와 도착지 모두 있는 경우
-            webUrl = `https://map.naver.com/v5/directions/${orig.lat},${orig.lng},${origName}/to/${dest.lat},${dest.lng},${destName}`;
-          } else {
-            // 출발지가 없으면 도착지만 설정 (현재 위치에서 출발)
-            // 좌표와 이름을 모두 포함하여 네이버 지도가 해당 위치로 이동하도록 함
-            webUrl = `https://map.naver.com/v5/directions/-/to/${dest.lat},${dest.lng},${destName}`;
-          }
+          // 좌표 기반 지도 표시 + 마커 표시
+          // 형식: https://map.naver.com/v5/?c={경도},{위도},{줌레벨},0,0,0,dh
+          // 추가로 검색 쿼리를 통해 장소명도 함께 전달
+          const webUrl = `https://map.naver.com/v5/search/${destName}?c=${dest.lng},${dest.lat},15,0,0,0,dh`;
 
           // 네이버 지도 앱 URL (자동차 길찾기: /route/car, appname 필수)
           // 문서: https://guide.ncloud-docs.com/docs/maps-url-scheme
