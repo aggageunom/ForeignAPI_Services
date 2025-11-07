@@ -20,11 +20,12 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { ExternalLink, Navigation } from "lucide-react";
+import { Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TourDetail } from "@/lib/types/tour";
 import { convertCoordinates } from "@/lib/types/tour";
 import { cn } from "@/lib/utils";
+import { NavigationDialog } from "./navigation-dialog";
 
 // Naver Maps API 타입 정의
 declare global {
@@ -48,6 +49,7 @@ function DetailMap({ detail, className, height = "400px" }: DetailMapProps) {
   const [error, setError] = useState<string | null>(null);
   const scriptLoadedRef = useRef(false);
   const initializedRef = useRef(false);
+  const [navigationDialogOpen, setNavigationDialogOpen] = useState(false);
 
   // 좌표 변환 (메모이제이션하여 불필요한 재생성 방지)
   const coordinates = useMemo(() => {
@@ -476,25 +478,17 @@ function DetailMap({ detail, className, height = "400px" }: DetailMapProps) {
     };
   }, []);
 
-  // 길찾기 URL 생성
-  const getDirectionsUrl = () => {
-    if (!coordinates) return null;
-
-    // 네이버 지도 길찾기 URL (웹)
-    const lat = coordinates.lat;
-    const lng = coordinates.lng;
-    const address = encodeURIComponent(detail.addr1 + (detail.addr2 || ""));
-
-    // 네이버 지도 앱 URL (모바일)
-    const appUrl = `nmap://route/car?dlat=${lat}&dlng=${lng}&dname=${address}`;
-
-    // 네이버 지도 웹 URL (데스크톱)
-    const webUrl = `https://map.naver.com/v5/directions/-/${lng},${lat},,place/${address}`;
-
-    return { appUrl, webUrl };
+  /**
+   * 길찾기 다이얼로그 열기
+   */
+  const handleOpenNavigation = () => {
+    console.log("[DetailMap] 길찾기 버튼 클릭:", {
+      title: detail.title,
+      coordinates,
+      address: detail.addr1 + (detail.addr2 || ""),
+    });
+    setNavigationDialogOpen(true);
   };
-
-  const directionsUrl = getDirectionsUrl();
 
   if (!coordinates) {
     return (
@@ -553,30 +547,14 @@ function DetailMap({ detail, className, height = "400px" }: DetailMapProps) {
 
       {/* 길찾기 버튼 및 좌표 정보 */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        {directionsUrl && (
-          <Button
-            asChild
-            variant="outline"
-            className="w-full sm:w-auto"
-            onClick={() => {
-              console.log("[DetailMap] 길찾기 버튼 클릭:", {
-                title: detail.title,
-                coordinates,
-              });
-            }}
-          >
-            <a
-              href={directionsUrl.webUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2"
-            >
-              <Navigation className="h-4 w-4" />
-              네이버 지도에서 길찾기
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={handleOpenNavigation}
+        >
+          <Navigation className="h-4 w-4 mr-2" />
+          길찾기
+        </Button>
 
         {/* 좌표 정보 */}
         <div className="text-sm text-muted-foreground">
@@ -586,6 +564,20 @@ function DetailMap({ detail, className, height = "400px" }: DetailMapProps) {
           </span>
         </div>
       </div>
+
+      {/* 네비게이션 다이얼로그 */}
+      {coordinates && (
+        <NavigationDialog
+          open={navigationDialogOpen}
+          onOpenChange={setNavigationDialogOpen}
+          destination={{
+            lat: coordinates.lat,
+            lng: coordinates.lng,
+            name: detail.title,
+            address: detail.addr1 + (detail.addr2 ? ` ${detail.addr2}` : ""),
+          }}
+        />
+      )}
     </div>
   );
 }

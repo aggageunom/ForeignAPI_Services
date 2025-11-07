@@ -71,6 +71,7 @@ export interface TourItem {
   cat2?: string; // 중분류
   cat3?: string; // 소분류
   modifiedtime: string; // 수정일
+  petInfo?: PetTourInfo; // 반려동물 정보 (선택 사항)
 }
 
 /**

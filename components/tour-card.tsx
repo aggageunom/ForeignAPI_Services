@@ -129,6 +129,63 @@ function TourCardComponent({
             <MapPin className="h-12 w-12 text-muted-foreground" />
           </div>
         )}
+
+        {/* 반려동물 가능 아이콘 및 크기 제한 뱃지 */}
+        {tour.petInfo && (
+          <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+            {/* 반려동물 가능 아이콘 */}
+            <span className="text-2xl" title="반려동물 동반 가능">
+              🐾
+            </span>
+
+            {/* 크기 제한 뱃지 */}
+            {tour.petInfo.chkpetsize &&
+              (() => {
+                const sizeInfo = tour.petInfo.chkpetsize.toLowerCase();
+                let badgeText = "";
+                let badgeColor = "";
+
+                if (sizeInfo.includes("소형") || sizeInfo.includes("small")) {
+                  badgeText = "소형견 OK";
+                  badgeColor = "bg-green-500/90";
+                } else if (
+                  sizeInfo.includes("중형") ||
+                  sizeInfo.includes("medium")
+                ) {
+                  badgeText = "중형견 OK";
+                  badgeColor = "bg-blue-500/90";
+                } else if (
+                  sizeInfo.includes("대형") ||
+                  sizeInfo.includes("large")
+                ) {
+                  badgeText = "대형견 OK";
+                  badgeColor = "bg-purple-500/90";
+                } else if (
+                  sizeInfo.includes("가능") ||
+                  sizeInfo.includes("all") ||
+                  sizeInfo.includes("전체")
+                ) {
+                  badgeText = "모든 크기 OK";
+                  badgeColor = "bg-emerald-500/90";
+                }
+
+                if (badgeText) {
+                  return (
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold text-white shadow-md",
+                        badgeColor,
+                      )}
+                      title={`반려동물 크기: ${tour.petInfo.chkpetsize}`}
+                    >
+                      {badgeText}
+                    </span>
+                  );
+                }
+                return null;
+              })()}
+          </div>
+        )}
       </div>
 
       {/* 카드 내용 */}

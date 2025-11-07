@@ -144,7 +144,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 petInfo.chkpetleash === "가능" ||
                 petInfo.chkpetleash === "Y" ||
                 petInfo.chkpetleash === "가능함";
-              return { tour, isPetAllowed: isAllowed, source: "petTour" };
+              // 반려동물 정보를 TourItem에 추가
+              const tourWithPetInfo: TourItem = {
+                ...tour,
+                petInfo: isAllowed ? petInfo : undefined,
+              };
+              return {
+                tour: tourWithPetInfo,
+                isPetAllowed: isAllowed,
+                source: "petTour",
+              };
             }
 
             // detailPetTour2에 정보가 없으면 detailIntro2의 chkpet 확인
@@ -162,7 +171,22 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 intro.chkpet === "OK" ||
                 intro.chkpet === "ok" ||
                 intro.chkpet === "O";
-              return { tour, isPetAllowed: isAllowed, source: "intro" };
+              // detailIntro2의 정보로 간단한 PetTourInfo 생성
+              const tourWithPetInfo: TourItem = {
+                ...tour,
+                petInfo: isAllowed
+                  ? {
+                      contentid: tour.contentid,
+                      contenttypeid: tour.contenttypeid,
+                      chkpetleash: intro.chkpet,
+                    }
+                  : undefined,
+              };
+              return {
+                tour: tourWithPetInfo,
+                isPetAllowed: isAllowed,
+                source: "intro",
+              };
             }
 
             return { tour, isPetAllowed: false, source: "none" };

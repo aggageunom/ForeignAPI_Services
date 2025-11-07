@@ -22,7 +22,7 @@
 
 import { useEffect, useRef, useState, useCallback, memo } from "react";
 import type { TourItem } from "@/lib/types/tour";
-import { convertCoordinates } from "@/lib/types/tour";
+import { convertCoordinates, CONTENT_TYPE } from "@/lib/types/tour";
 import { cn } from "@/lib/utils";
 
 // Naver Maps API 타입 정의
@@ -73,12 +73,16 @@ function NaverMapComponent({
       // 인증 실패 감지 함수 설정 (공식 문서 권장)
       if (!window.navermap_authFailure) {
         window.navermap_authFailure = () => {
-          const currentUrl = typeof window !== 'undefined' ? window.location.origin : '알 수 없음';
-          const errorMsg =
-            `네이버 지도 API 인증에 실패했습니다.\n\n현재 도메인: ${currentUrl}\n\nNCP 콘솔에서 다음 URL을 Web 서비스 URL에 추가해주세요:\n- ${currentUrl}\n- ${currentUrl}/\n\n또는 와일드카드 사용: ${currentUrl.replace(/^https?:\/\//, '*://').replace(/\/$/, '')}/*`;
+          const currentUrl =
+            typeof window !== "undefined"
+              ? window.location.origin
+              : "알 수 없음";
+          const errorMsg = `네이버 지도 API 인증에 실패했습니다.\n\n현재 도메인: ${currentUrl}\n\nNCP 콘솔에서 다음 URL을 Web 서비스 URL에 추가해주세요:\n- ${currentUrl}\n- ${currentUrl}/\n\n또는 와일드카드 사용: ${currentUrl
+            .replace(/^https?:\/\//, "*://")
+            .replace(/\/$/, "")}/*`;
           console.error("[NaverMap]", errorMsg, {
             currentUrl,
-            clientId: clientId || 'NOT_SET',
+            clientId: clientId || "NOT_SET",
           });
           setError(errorMsg);
           setIsLoading(false);
@@ -274,6 +278,30 @@ function NaverMapComponent({
     return map;
   }, [tours]);
 
+  // 관광 타입별 마커 색상 매핑 함수
+  const getMarkerColor = useCallback((contentTypeId: string): string => {
+    switch (contentTypeId) {
+      case CONTENT_TYPE.TOURIST_SPOT: // 관광지
+        return "#10B981"; // 초록색
+      case CONTENT_TYPE.CULTURAL_FACILITY: // 문화시설
+        return "#3B82F6"; // 파란색
+      case CONTENT_TYPE.FESTIVAL: // 축제/행사
+        return "#F59E0B"; // 주황색
+      case CONTENT_TYPE.TOUR_COURSE: // 여행코스
+        return "#8B5CF6"; // 보라색
+      case CONTENT_TYPE.LEISURE_SPORTS: // 레포츠
+        return "#EF4444"; // 빨간색
+      case CONTENT_TYPE.ACCOMMODATION: // 숙박
+        return "#06B6D4"; // 청록색
+      case CONTENT_TYPE.SHOPPING: // 쇼핑
+        return "#EC4899"; // 핑크색
+      case CONTENT_TYPE.RESTAURANT: // 음식점
+        return "#F97316"; // 오렌지색
+      default:
+        return "#4F46E5"; // 기본 인디고색
+    }
+  }, []);
+
   // 마커 생성 및 표시
   const createMarkers = useCallback(
     (map: any) => {
@@ -303,7 +331,15 @@ function NaverMapComponent({
         const coords = convertCoordinates(tour.mapx, tour.mapy);
         const position = new window.naver.maps.LatLng(coords.lat, coords.lng);
 
-        // 마커 생성 (기본 스타일)
+        // 관광 타입에 따른 마커 색상 결정
+        const markerColor = getMarkerColor(tour.contenttypeid);
+        console.log("[NaverMap] 마커 색상 설정:", {
+          title: tour.title,
+          contentTypeId: tour.contenttypeid,
+          color: markerColor,
+        });
+
+        // 마커 생성 (관광 타입별 색상)
         const marker = new window.naver.maps.Marker({
           position,
           map,
@@ -311,7 +347,7 @@ function NaverMapComponent({
           icon: {
             content: `
               <div style="
-                background-color: #4F46E5;
+                background-color: ${markerColor};
                 width: 30px;
                 height: 30px;
                 border-radius: 50% 50% 50% 0;
@@ -384,7 +420,7 @@ function NaverMapComponent({
       console.log(`[NaverMap] 마커 ${markersRef.current.length}개 생성 완료`);
       console.groupEnd();
     },
-    [tours, onMarkerClick],
+    [tours, onMarkerClick, getMarkerColor],
   );
 
   // 마커 강조 업데이트
@@ -397,12 +433,15 @@ function NaverMapComponent({
       const isHighlighted = markerInfo.tour.contentid === highlightedTourId;
       const isSelected = markerInfo.tour.contentid === selectedTourId;
 
+      // 관광 타입별 기본 색상 가져오기
+      const defaultColor = getMarkerColor(markerInfo.tour.contenttypeid);
+
       // 강조된 마커는 더 크고 밝은 색상으로 표시
       const backgroundColor = isHighlighted
-        ? "#EF4444"
+        ? "#EF4444" // 빨간색 (호버 시)
         : isSelected
-        ? "#10B981"
-        : "#4F46E5";
+        ? "#10B981" // 초록색 (선택 시)
+        : defaultColor; // 관광 타입별 색상
       const size = isHighlighted ? 40 : isSelected ? 35 : 30;
       const borderWidth = isHighlighted ? 3 : isSelected ? 2.5 : 2;
       const zIndex = isHighlighted ? 1000 : isSelected ? 500 : 100;
@@ -445,7 +484,7 @@ function NaverMapComponent({
     if (highlightedTourId) {
       console.log("[NaverMap] 마커 강조:", highlightedTourId);
     }
-  }, [highlightedTourId, selectedTourId]);
+  }, [highlightedTourId, selectedTourId, getMarkerColor]);
 
   // 선택된 관광지로 지도 이동
   useEffect(() => {
