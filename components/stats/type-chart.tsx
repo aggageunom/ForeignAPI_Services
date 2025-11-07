@@ -203,7 +203,7 @@ export function TypeChart({ data, isLoading = false }: TypeChartProps) {
             <Legend
               verticalAlign="bottom"
               height={36}
-              formatter={(value, entry) => {
+              formatter={(value) => {
                 const dataEntry = chartData.find((d) => d.name === value);
                 const color = dataEntry
                   ? getTypeColor(dataEntry.typeId, chartData.indexOf(dataEntry))

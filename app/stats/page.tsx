@@ -24,6 +24,7 @@ import { StatsSummary as StatsSummaryComponent } from "@/components/stats/stats-
 import { RegionChart } from "@/components/stats/region-chart";
 import { TypeChart } from "@/components/stats/type-chart";
 import { Error } from "@/components/ui/error";
+import { formatApiError } from "@/lib/utils/error-handler";
 import { BarChart3 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -82,17 +83,13 @@ export default async function StatsPage() {
         </section>
       </main>
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("[StatsPage] 오류 발생:", error);
+    const errorMessage = formatApiError(error);
+
     return (
       <main className="container mx-auto px-4 py-8">
-        <Error
-          message={
-            error instanceof Error
-              ? error.message
-              : "통계 데이터를 불러오는 중 오류가 발생했습니다."
-          }
-        />
+        <Error message={errorMessage} />
       </main>
     );
   }

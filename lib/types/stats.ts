@@ -10,7 +10,7 @@
  * - StatsSummary: 통계 요약 정보
  */
 
-import type { AreaCode, ContentTypeId } from "./tour";
+import type { ContentTypeId } from "./tour";
 
 /**
  * 지역별 관광지 통계

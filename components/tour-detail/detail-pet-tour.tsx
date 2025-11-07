@@ -28,7 +28,6 @@ import {
   Info,
   Car,
   Footprints,
-  Droplets,
 } from "lucide-react";
 
 interface DetailPetTourProps {

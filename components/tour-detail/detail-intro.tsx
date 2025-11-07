@@ -27,7 +27,6 @@ import {
   Car,
   Users,
   Baby,
-  Dog,
   Info,
 } from "lucide-react";
 import type { TourIntro } from "@/lib/types/tour";
@@ -45,7 +44,7 @@ function sanitizeText(text: string): string {
   if (!text) return "";
 
   // <br>, <br/>, <br /> 태그를 줄바꿈으로 변환
-  let sanitized = text
+  const sanitized = text
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/?[^>]+(>|$)/g, ""); // 나머지 HTML 태그 제거
 
