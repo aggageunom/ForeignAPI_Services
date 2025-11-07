@@ -6,20 +6,23 @@
  *
  * 주요 기능:
  * 1. 지역 필터 (시/도 선택)
- * 2. 관광 타입 필터 (12, 14, 15, 25, 28, 32, 38, 39)
- * 3. 반려동물 동반 가능 필터 (토글)
- * 4. 주차 가능 필터 (토글)
- * 5. URL Query를 통한 필터 상태 관리
- * 6. "전체" 옵션 제공
+ * 2. 시/군/구 필터 (시/도 선택 시 활성화)
+ * 3. 관광 타입 필터 (12, 14, 15, 25, 28, 32, 38, 39)
+ * 4. 반려동물 동반 가능 필터 (토글)
+ * 5. 주차 가능 필터 (토글)
+ * 6. URL Query를 통한 필터 상태 관리
+ * 7. "전체" 옵션 제공
  *
  * @dependencies
  * - lib/types/tour.ts: CONTENT_TYPE, CONTENT_TYPE_NAME
+ * - actions/tour-actions.ts: getSigunguCodes (Server Action)
  * - next/navigation: useRouter, useSearchParams
  * - components/ui/button: 필터 초기화 버튼
  */
 
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import {
@@ -27,8 +30,16 @@ import {
   CONTENT_TYPE_NAME,
   type AreaCode,
 } from "@/lib/types/tour";
+import { getSigunguCodes } from "@/actions/tour-actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 interface TourFiltersProps {
@@ -65,13 +76,52 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
   const searchParams = useSearchParams();
 
   const currentAreaCode = searchParams.get("areaCode") || "";
+  const currentSigunguCode = searchParams.get("sigunguCode") || "";
   const currentContentTypeId = searchParams.get("contentTypeId") || "";
   const petFriendly = searchParams.get("petFriendly") === "true";
   const parkingAvailable = searchParams.get("parkingAvailable") === "true";
 
+  // 시/군/구 코드 목록 상태
+  const [sigunguCodes, setSigunguCodes] = useState<AreaCode[]>([]);
+  const [loadingSigungu, setLoadingSigungu] = useState(false);
+
   // 실제 지역코드가 있으면 사용, 없으면 기본값 사용
   const availableAreaCodes =
     areaCodes.length > 0 ? areaCodes : DEFAULT_AREA_CODES;
+
+  /**
+   * 시/도 선택 시 해당 시/도의 시/군/구 목록 로드
+   */
+  useEffect(() => {
+    console.group("[TourFilters] 시/군/구 목록 로드");
+    console.log("현재 선택된 시/도 코드:", currentAreaCode);
+
+    if (currentAreaCode) {
+      setLoadingSigungu(true);
+      getSigunguCodes(currentAreaCode)
+        .then((codes) => {
+          if (codes) {
+            console.log(`시/군/구 목록 로드 완료:`, codes.length, "개");
+            setSigunguCodes(codes);
+          } else {
+            console.warn("시/군/구 목록 로드 결과 없음");
+            setSigunguCodes([]);
+          }
+        })
+        .catch((error) => {
+          console.error("시/군/구 목록 로드 실패:", error);
+          setSigunguCodes([]);
+        })
+        .finally(() => {
+          setLoadingSigungu(false);
+        });
+    } else {
+      console.log("시/도가 선택되지 않아 시/군/구 목록 초기화");
+      setSigunguCodes([]);
+    }
+
+    console.groupEnd();
+  }, [currentAreaCode]);
 
   /**
    * 필터 값 변경 핸들러
@@ -83,6 +133,11 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
       params.delete(key);
     } else {
       params.set(key, value);
+    }
+
+    // 시/도 변경 시 시/군/구 필터 초기화
+    if (key === "areaCode") {
+      params.delete("sigunguCode");
     }
 
     // 페이지는 1로 리셋
@@ -131,6 +186,7 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
    */
   const hasActiveFilters =
     currentAreaCode !== "" ||
+    currentSigunguCode !== "" ||
     currentContentTypeId !== "" ||
     petFriendly ||
     parkingAvailable;
@@ -157,190 +213,270 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* 지역 필터 */}
-        <div className="space-y-2">
-          <Label htmlFor="area-filter">지역</Label>
-          <select
-            id="area-filter"
-            value={currentAreaCode}
-            onChange={(e) => handleFilterChange("areaCode", e.target.value)}
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <option value="">전체</option>
-            {availableAreaCodes.map((area) => (
-              <option key={area.code} value={area.code}>
-                {area.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* 관광 타입 필터 */}
-        <div className="space-y-2">
-          <Label htmlFor="content-type-filter">관광 타입</Label>
-          <select
-            id="content-type-filter"
-            value={currentContentTypeId}
-            onChange={(e) =>
-              handleFilterChange("contentTypeId", e.target.value)
-            }
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <option value="">전체</option>
-            {Object.values(CONTENT_TYPE).map((value) => (
-              <option key={value} value={value}>
-                {CONTENT_TYPE_NAME[value as keyof typeof CONTENT_TYPE_NAME]}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* 반려동물 동반 가능 필터 */}
-      <div className="space-y-2 border-t pt-4">
-        <Label
-          htmlFor="pet-friendly-filter"
-          className="flex items-center gap-2"
-        >
-          <span className="text-lg">🐾</span>
-          반려동물 동반 가능
-        </Label>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handlePetFriendlyToggle}
-            className={cn(
-              "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-              petFriendly
-                ? "bg-green-600 dark:bg-green-500"
-                : "bg-gray-200 dark:bg-gray-700",
-            )}
-            role="switch"
-            aria-checked={petFriendly}
-            aria-label="반려동물 동반 가능 필터"
-          >
-            <span
-              className={cn(
-                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                petFriendly ? "translate-x-6" : "translate-x-1",
-              )}
-            />
-          </button>
-          <span className="text-sm text-muted-foreground">
-            {petFriendly
-              ? "반려동물 동반 가능한 관광지만 표시"
-              : "모든 관광지 표시"}
-          </span>
-        </div>
-        {petFriendly && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-            ⚠️ 반려동물 정보는 각 관광지 상세페이지에서 확인할 수 있습니다.
-          </p>
-        )}
-      </div>
-
-      {/* 주차 가능 필터 */}
-      <div className="space-y-2 border-t pt-4">
-        <Label htmlFor="parking-filter" className="flex items-center gap-2">
-          <span className="text-lg">🅿️</span>
-          주차 가능
-        </Label>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleParkingToggle}
-            className={cn(
-              "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-              parkingAvailable
-                ? "bg-blue-600 dark:bg-blue-500"
-                : "bg-gray-200 dark:bg-gray-700",
-            )}
-            role="switch"
-            aria-checked={parkingAvailable}
-            aria-label="주차 가능 필터"
-          >
-            <span
-              className={cn(
-                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                parkingAvailable ? "translate-x-6" : "translate-x-1",
-              )}
-            />
-          </button>
-          <span className="text-sm text-muted-foreground">
-            {parkingAvailable
-              ? "주차 가능한 관광지만 표시"
-              : "모든 관광지 표시"}
-          </span>
-        </div>
-        {parkingAvailable && (
-          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-            ℹ️ 주차 정보는 각 관광지 상세페이지에서 확인할 수 있습니다.
-          </p>
-        )}
-      </div>
-
-      {/* 활성 필터 표시 */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap gap-2 pt-2 border-t">
-          {currentAreaCode && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
-              지역:{" "}
-              {availableAreaCodes.find((a) => a.code === currentAreaCode)?.name}
-              <button
-                onClick={() => handleFilterChange("areaCode", "")}
-                className="ml-1 hover:text-primary/80"
-                aria-label="지역 필터 제거"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          )}
-          {currentContentTypeId && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
-              타입:{" "}
-              {
-                CONTENT_TYPE_NAME[
-                  currentContentTypeId as keyof typeof CONTENT_TYPE_NAME
-                ]
+      {/* 선택 필터 영역 (지역, 시/군/구, 관광 타입) */}
+      <div className="space-y-4 rounded-md border bg-muted/30 p-4">
+        <div className="grid gap-4 md:grid-cols-3">
+          {/* 지역 필터 (시/도) */}
+          <div className="space-y-2">
+            <Label htmlFor="area-filter">지역 (시/도)</Label>
+            <Select
+              value={currentAreaCode || "all"}
+              onValueChange={(value) =>
+                handleFilterChange("areaCode", value === "all" ? "" : value)
               }
-              <button
-                onClick={() => handleFilterChange("contentTypeId", "")}
-                className="ml-1 hover:text-primary/80"
-                aria-label="타입 필터 제거"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          )}
-          {petFriendly && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-1 text-xs text-green-700 dark:text-green-400">
-              <span>🐾</span>
-              반려동물 동반 가능
-              <button
-                onClick={handlePetFriendlyToggle}
-                className="ml-1 hover:text-green-600 dark:hover:text-green-300"
-                aria-label="반려동물 필터 제거"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          )}
-          {parkingAvailable && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-1 text-xs text-blue-700 dark:text-blue-400">
-              <span>🅿️</span>
-              주차 가능
-              <button
-                onClick={handleParkingToggle}
-                className="ml-1 hover:text-blue-600 dark:hover:text-blue-300"
-                aria-label="주차 필터 제거"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          )}
+            >
+              <SelectTrigger id="area-filter" className="w-full">
+                <SelectValue placeholder="전체" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                <SelectItem value="all">전체</SelectItem>
+                {availableAreaCodes.map((area) => (
+                  <SelectItem key={area.code} value={area.code}>
+                    {area.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 시/군/구 필터 */}
+          <div className="space-y-2">
+            <Label htmlFor="sigungu-filter">
+              시/군/구
+              {loadingSigungu && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  (로딩 중...)
+                </span>
+              )}
+            </Label>
+            <Select
+              value={currentSigunguCode || "all"}
+              onValueChange={(value) =>
+                handleFilterChange("sigunguCode", value === "all" ? "" : value)
+              }
+              disabled={!currentAreaCode || loadingSigungu}
+            >
+              <SelectTrigger id="sigungu-filter" className="w-full">
+                <SelectValue
+                  placeholder={
+                    !currentAreaCode ? "시/도를 먼저 선택하세요" : "전체"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {currentAreaCode && <SelectItem value="all">전체</SelectItem>}
+                {sigunguCodes.map((sigungu) => (
+                  <SelectItem key={sigungu.code} value={sigungu.code}>
+                    {sigungu.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 관광 타입 필터 */}
+          <div className="space-y-2">
+            <Label htmlFor="content-type-filter">관광 타입</Label>
+            <Select
+              value={currentContentTypeId || "all"}
+              onValueChange={(value) =>
+                handleFilterChange(
+                  "contentTypeId",
+                  value === "all" ? "" : value,
+                )
+              }
+            >
+              <SelectTrigger id="content-type-filter" className="w-full">
+                <SelectValue placeholder="전체" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                <SelectItem value="all">전체</SelectItem>
+                {Object.values(CONTENT_TYPE).map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {CONTENT_TYPE_NAME[value as keyof typeof CONTENT_TYPE_NAME]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      )}
+
+        {/* 활성 필터 표시 */}
+        {hasActiveFilters &&
+          (currentAreaCode || currentSigunguCode || currentContentTypeId) && (
+            <div className="flex flex-wrap gap-2 pt-2 border-t">
+              {currentAreaCode && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
+                  시/도:{" "}
+                  {
+                    availableAreaCodes.find((a) => a.code === currentAreaCode)
+                      ?.name
+                  }
+                  <button
+                    onClick={() => handleFilterChange("areaCode", "")}
+                    className="ml-1 hover:text-primary/80"
+                    aria-label="지역 필터 제거"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {currentSigunguCode && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
+                  시/군/구:{" "}
+                  {
+                    sigunguCodes.find((s) => s.code === currentSigunguCode)
+                      ?.name
+                  }
+                  <button
+                    onClick={() => handleFilterChange("sigunguCode", "")}
+                    className="ml-1 hover:text-primary/80"
+                    aria-label="시/군/구 필터 제거"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {currentContentTypeId && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
+                  타입:{" "}
+                  {
+                    CONTENT_TYPE_NAME[
+                      currentContentTypeId as keyof typeof CONTENT_TYPE_NAME
+                    ]
+                  }
+                  <button
+                    onClick={() => handleFilterChange("contentTypeId", "")}
+                    className="ml-1 hover:text-primary/80"
+                    aria-label="타입 필터 제거"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
+      </div>
+
+      {/* 토글 필터 영역 (반려동물, 주차) */}
+      <div className="space-y-4 rounded-md border bg-muted/30 p-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* 반려동물 동반 가능 필터 */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="pet-friendly-filter"
+              className="flex items-center gap-2"
+            >
+              <span className="text-lg">🐾</span>
+              반려동물 동반 가능
+            </Label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handlePetFriendlyToggle}
+                className={cn(
+                  "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                  petFriendly
+                    ? "bg-green-600 dark:bg-green-500"
+                    : "bg-gray-200 dark:bg-gray-700",
+                )}
+                role="switch"
+                aria-checked={petFriendly}
+                aria-label="반려동물 동반 가능 필터"
+              >
+                <span
+                  className={cn(
+                    "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                    petFriendly ? "translate-x-6" : "translate-x-1",
+                  )}
+                />
+              </button>
+              <span className="text-sm text-muted-foreground">
+                {petFriendly
+                  ? "반려동물 동반 가능한 관광지만 표시"
+                  : "모든 관광지 표시"}
+              </span>
+            </div>
+            {petFriendly && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                ⚠️ 반려동물 정보는 각 관광지 상세페이지에서 확인할 수 있습니다.
+              </p>
+            )}
+          </div>
+
+          {/* 주차 가능 필터 */}
+          <div className="space-y-2">
+            <Label htmlFor="parking-filter" className="flex items-center gap-2">
+              <span className="text-lg">🅿️</span>
+              주차 가능
+            </Label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleParkingToggle}
+                className={cn(
+                  "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                  parkingAvailable
+                    ? "bg-blue-600 dark:bg-blue-500"
+                    : "bg-gray-200 dark:bg-gray-700",
+                )}
+                role="switch"
+                aria-checked={parkingAvailable}
+                aria-label="주차 가능 필터"
+              >
+                <span
+                  className={cn(
+                    "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                    parkingAvailable ? "translate-x-6" : "translate-x-1",
+                  )}
+                />
+              </button>
+              <span className="text-sm text-muted-foreground">
+                {parkingAvailable
+                  ? "주차 가능한 관광지만 표시"
+                  : "모든 관광지 표시"}
+              </span>
+            </div>
+            {parkingAvailable && (
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                ℹ️ 주차 정보는 각 관광지 상세페이지에서 확인할 수 있습니다.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* 활성 토글 필터 표시 */}
+        {(petFriendly || parkingAvailable) && (
+          <div className="flex flex-wrap gap-2 pt-2 border-t">
+            {petFriendly && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-1 text-xs text-green-700 dark:text-green-400">
+                <span>🐾</span>
+                반려동물 동반 가능
+                <button
+                  onClick={handlePetFriendlyToggle}
+                  className="ml-1 hover:text-green-600 dark:hover:text-green-300"
+                  aria-label="반려동물 필터 제거"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+            {parkingAvailable && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-1 text-xs text-blue-700 dark:text-blue-400">
+                <span>🅿️</span>
+                주차 가능
+                <button
+                  onClick={handleParkingToggle}
+                  className="ml-1 hover:text-blue-600 dark:hover:text-blue-300"
+                  aria-label="주차 필터 제거"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

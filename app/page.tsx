@@ -73,6 +73,7 @@ function parseDate(dateString: string): Date {
 interface HomePageProps {
   searchParams: Promise<{
     areaCode?: string;
+    sigunguCode?: string;
     contentTypeId?: string;
     keyword?: string;
     page?: string;
@@ -85,6 +86,7 @@ interface HomePageProps {
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const areaCode = params.areaCode;
+  const sigunguCode = params.sigunguCode;
   const contentTypeId = params.contentTypeId;
   const keyword = params.keyword;
   const page = parseInt(params.page || "1", 10);
@@ -116,9 +118,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         numOfRows,
       );
     } else {
-      console.log("[HomePage] 지역 기반 목록 조회");
+      console.log("[HomePage] 지역 기반 목록 조회", {
+        areaCode,
+        sigunguCode,
+        contentTypeId,
+      });
       tours = await getAreaBasedList(
         areaCode || undefined,
+        sigunguCode || undefined,
         contentTypeId as any,
         page,
         numOfRows,

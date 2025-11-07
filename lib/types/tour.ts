@@ -144,7 +144,7 @@ export interface TourImage {
  * 지역코드 정보 (areaCode2 응답)
  */
 export interface AreaCode {
-  code: string; // 지역코드
+  code: string; // 지역코드 (시/도 또는 시/군/구 코드)
   name: string; // 지역명
   rnum?: string; // 순번
 }

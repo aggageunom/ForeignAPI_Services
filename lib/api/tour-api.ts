@@ -267,22 +267,117 @@ async function fetchTourApi<T>(
 }
 
 /**
- * 지역코드 조회 (areaCode2)
+ * 지역코드 조회 (areaCode2) - 전체 데이터 가져오기
  * @param areaCode 상위 지역코드 (없으면 최상위 지역 목록)
- * @returns 지역코드 목록
+ * @returns 지역코드 목록 (전체)
  */
 export async function getAreaCode(areaCode?: string): Promise<AreaCode[]> {
-  const params: Record<string, string | undefined> = {};
-  if (areaCode) {
-    params.areaCode = areaCode;
+  console.group(`[getAreaCode] 지역코드 조회 시작`);
+  console.log("Area Code:", areaCode || "전체");
+
+  const apiKey = getApiKey();
+  const allResults: AreaCode[] = [];
+  let pageNo = 1;
+  const numOfRows = 1000; // 한 번에 최대 1000개 가져오기
+  let totalCount = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const params: Record<string, string | number | undefined> = {
+      pageNo,
+      numOfRows,
+    };
+    if (areaCode) {
+      params.areaCode = areaCode;
+    }
+
+    try {
+      const searchParams = new URLSearchParams({
+        serviceKey: apiKey,
+        ...COMMON_PARAMS,
+        ...Object.fromEntries(
+          Object.entries(params).filter(
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            ([_, value]) =>
+              value !== undefined && value !== null && value !== "",
+          ) as [string, string | number][],
+        ),
+      } as Record<string, string>);
+
+      const url = `${BASE_URL}/areaCode2?${searchParams.toString()}`;
+      console.log(`[getAreaCode] 페이지 ${pageNo} 요청 중...`);
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+        next: { revalidate: 3600 }, // 1시간 캐시
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `API 요청 실패: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data: ApiResponse<AreaCode> | ApiError = await response.json();
+
+      // 에러 응답 체크
+      if ("response" in data && data.response.header.resultCode !== "0000") {
+        const errorMsg = data.response.header.resultMsg;
+        throw new Error(`API 에러: ${errorMsg}`);
+      }
+
+      // 성공 응답 처리
+      const responseData = data as ApiResponse<AreaCode>;
+      const items = responseData.response.body.items.item;
+      const pageResults = Array.isArray(items) ? items : items ? [items] : [];
+
+      totalCount = responseData.response.body.totalCount || 0;
+      allResults.push(...pageResults);
+
+      console.log(
+        `[getAreaCode] 페이지 ${pageNo}: ${pageResults.length}개 항목 (전체: ${totalCount}개, 누적: ${allResults.length}개)`,
+      );
+
+      // 더 가져올 데이터가 있는지 확인
+      const currentPageTotal = pageNo * numOfRows;
+      hasMore =
+        currentPageTotal < totalCount && pageResults.length === numOfRows;
+
+      if (hasMore) {
+        pageNo++;
+      } else {
+        hasMore = false;
+      }
+    } catch (error) {
+      console.error(`[getAreaCode] 페이지 ${pageNo} 조회 실패:`, error);
+      // 첫 페이지 실패 시 에러 throw, 이후 페이지 실패 시 현재까지 수집한 데이터 반환
+      if (pageNo === 1) {
+        console.groupEnd();
+        throw error;
+      } else {
+        console.warn(
+          `[getAreaCode] 일부 페이지 조회 실패, 현재까지 수집한 ${allResults.length}개 항목 반환`,
+        );
+        hasMore = false;
+      }
+    }
   }
 
-  return fetchTourApi<AreaCode[]>("/areaCode2", params);
+  console.log(
+    `[getAreaCode] 조회 완료: 총 ${allResults.length}개 항목 (전체: ${totalCount}개)`,
+  );
+  console.groupEnd();
+
+  return allResults;
 }
 
 /**
  * 지역 기반 관광정보 조회 (areaBasedList2)
- * @param areaCode 지역코드
+ * @param areaCode 지역코드 (시/도 코드)
+ * @param sigunguCode 시/군/구 코드 (선택)
  * @param contentTypeId 관광 타입 ID (선택)
  * @param pageNo 페이지 번호 (기본: 1)
  * @param numOfRows 페이지당 항목 수 (기본: 20)
@@ -290,6 +385,7 @@ export async function getAreaCode(areaCode?: string): Promise<AreaCode[]> {
  */
 export async function getAreaBasedList(
   areaCode?: string,
+  sigunguCode?: string,
   contentTypeId?: ContentTypeId,
   pageNo: number = 1,
   numOfRows: number = 20,
@@ -301,6 +397,10 @@ export async function getAreaBasedList(
 
   if (areaCode) {
     params.areaCode = areaCode;
+  }
+
+  if (sigunguCode) {
+    params.sigunguCode = sigunguCode;
   }
 
   if (contentTypeId) {
