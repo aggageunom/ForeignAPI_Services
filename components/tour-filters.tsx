@@ -2,13 +2,15 @@
  * @file tour-filters.tsx
  * @description 관광지 필터 컴포넌트
  *
- * 지역 및 관광 타입 필터를 제공하는 컴포넌트입니다.
+ * 지역, 관광 타입, 반려동물 동반, 주차 가능 필터를 제공하는 컴포넌트입니다.
  *
  * 주요 기능:
  * 1. 지역 필터 (시/도 선택)
  * 2. 관광 타입 필터 (12, 14, 15, 25, 28, 32, 38, 39)
- * 3. URL Query를 통한 필터 상태 관리
- * 4. "전체" 옵션 제공
+ * 3. 반려동물 동반 가능 필터 (토글)
+ * 4. 주차 가능 필터 (토글)
+ * 5. URL Query를 통한 필터 상태 관리
+ * 6. "전체" 옵션 제공
  *
  * @dependencies
  * - lib/types/tour.ts: CONTENT_TYPE, CONTENT_TYPE_NAME
@@ -65,6 +67,7 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
   const currentAreaCode = searchParams.get("areaCode") || "";
   const currentContentTypeId = searchParams.get("contentTypeId") || "";
   const petFriendly = searchParams.get("petFriendly") === "true";
+  const parkingAvailable = searchParams.get("parkingAvailable") === "true";
 
   // 실제 지역코드가 있으면 사용, 없으면 기본값 사용
   const availableAreaCodes =
@@ -110,10 +113,27 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
   };
 
   /**
+   * 주차 가능 필터 토글 핸들러
+   */
+  const handleParkingToggle = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (parkingAvailable) {
+      params.delete("parkingAvailable");
+    } else {
+      params.set("parkingAvailable", "true");
+    }
+    params.delete("page");
+    router.push(`/?${params.toString()}`);
+  };
+
+  /**
    * 필터가 적용되어 있는지 확인
    */
   const hasActiveFilters =
-    currentAreaCode !== "" || currentContentTypeId !== "" || petFriendly;
+    currentAreaCode !== "" ||
+    currentContentTypeId !== "" ||
+    petFriendly ||
+    parkingAvailable;
 
   return (
     <div
@@ -220,6 +240,46 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
         )}
       </div>
 
+      {/* 주차 가능 필터 */}
+      <div className="space-y-2 border-t pt-4">
+        <Label htmlFor="parking-filter" className="flex items-center gap-2">
+          <span className="text-lg">🅿️</span>
+          주차 가능
+        </Label>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleParkingToggle}
+            className={cn(
+              "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+              parkingAvailable
+                ? "bg-blue-600 dark:bg-blue-500"
+                : "bg-gray-200 dark:bg-gray-700",
+            )}
+            role="switch"
+            aria-checked={parkingAvailable}
+            aria-label="주차 가능 필터"
+          >
+            <span
+              className={cn(
+                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                parkingAvailable ? "translate-x-6" : "translate-x-1",
+              )}
+            />
+          </button>
+          <span className="text-sm text-muted-foreground">
+            {parkingAvailable
+              ? "주차 가능한 관광지만 표시"
+              : "모든 관광지 표시"}
+          </span>
+        </div>
+        {parkingAvailable && (
+          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+            ℹ️ 주차 정보는 각 관광지 상세페이지에서 확인할 수 있습니다.
+          </p>
+        )}
+      </div>
+
       {/* 활성 필터 표시 */}
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-2 pt-2 border-t">
@@ -261,6 +321,19 @@ export function TourFilters({ areaCodes, className }: TourFiltersProps) {
                 onClick={handlePetFriendlyToggle}
                 className="ml-1 hover:text-green-600 dark:hover:text-green-300"
                 aria-label="반려동물 필터 제거"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {parkingAvailable && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-1 text-xs text-blue-700 dark:text-blue-400">
+              <span>🅿️</span>
+              주차 가능
+              <button
+                onClick={handleParkingToggle}
+                className="ml-1 hover:text-blue-600 dark:hover:text-blue-300"
+                aria-label="주차 필터 제거"
               >
                 <X className="h-3 w-3" />
               </button>

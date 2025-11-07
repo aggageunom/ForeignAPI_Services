@@ -117,6 +117,9 @@ export function TourMapView({ tours, className }: TourMapViewProps) {
             viewMode === "list" && "hidden md:block",
             viewMode === "map" && "block",
             viewMode === "both" && "block",
+            // 데스크톱에서만 sticky 적용 (모바일에서는 일반 스크롤)
+            // top-32 = 8rem (네비게이션 바 4rem + 필터 영역 여백 고려)
+            viewMode === "both" && "md:sticky md:top-32 md:self-start",
           )}
         >
           <NaverMap
@@ -124,7 +127,7 @@ export function TourMapView({ tours, className }: TourMapViewProps) {
             selectedTourId={selectedTourId}
             highlightedTourId={highlightedTourId}
             onMarkerClick={handleMarkerClick}
-            height="600px"
+            height={viewMode === "both" ? "calc(100vh - 9rem)" : "600px"}
           />
         </div>
       </div>

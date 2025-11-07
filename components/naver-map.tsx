@@ -73,9 +73,13 @@ function NaverMapComponent({
       // 인증 실패 감지 함수 설정 (공식 문서 권장)
       if (!window.navermap_authFailure) {
         window.navermap_authFailure = () => {
+          const currentUrl = typeof window !== 'undefined' ? window.location.origin : '알 수 없음';
           const errorMsg =
-            "네이버 지도 API 인증에 실패했습니다. NCP 콘솔에서 Web 서비스 URL 설정을 확인해주세요.";
-          console.error("[NaverMap]", errorMsg);
+            `네이버 지도 API 인증에 실패했습니다.\n\n현재 도메인: ${currentUrl}\n\nNCP 콘솔에서 다음 URL을 Web 서비스 URL에 추가해주세요:\n- ${currentUrl}\n- ${currentUrl}/\n\n또는 와일드카드 사용: ${currentUrl.replace(/^https?:\/\//, '*://').replace(/\/$/, '')}/*`;
+          console.error("[NaverMap]", errorMsg, {
+            currentUrl,
+            clientId: clientId || 'NOT_SET',
+          });
           setError(errorMsg);
           setIsLoading(false);
           reject(new Error(errorMsg));

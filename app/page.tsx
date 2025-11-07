@@ -78,6 +78,7 @@ interface HomePageProps {
     page?: string;
     sort?: string;
     petFriendly?: string;
+    parkingAvailable?: string;
   }>;
 }
 
@@ -89,6 +90,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const page = parseInt(params.page || "1", 10);
   const sort = (params.sort || "latest") as "latest" | "name-asc" | "name-desc";
   const petFriendly = params.petFriendly === "true";
+  const parkingAvailable = params.parkingAvailable === "true";
   const numOfRows = 20;
 
   try {
@@ -193,6 +195,75 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       tours = filteredTours;
     }
 
+    // 주차 가능 필터링 (parkingAvailable이 true인 경우)
+    if (parkingAvailable) {
+      console.log(
+        "[HomePage] 주차 가능 필터링 시작:",
+        tours.length,
+        "개 관광지 확인",
+      );
+
+      // 각 관광지의 주차 정보 확인 (병렬 처리)
+      const parkingInfoResults = await Promise.allSettled(
+        tours.map(async (tour) => {
+          try {
+            const intro = await getTourIntro(
+              tour.contentid,
+              tour.contenttypeid,
+            );
+
+            // 주차 정보 확인
+            if (intro?.parking) {
+              const parkingInfo = intro.parking.trim().toLowerCase();
+              // 주차 가능한 경우를 판단하는 로직
+              const isAvailable =
+                parkingInfo !== "" &&
+                parkingInfo !== "없음" &&
+                parkingInfo !== "불가" &&
+                parkingInfo !== "불가능" &&
+                parkingInfo !== "없습니다" &&
+                parkingInfo !== "n" &&
+                parkingInfo !== "no" &&
+                !parkingInfo.includes("불가") &&
+                !parkingInfo.includes("없음");
+
+              return {
+                tour,
+                isParkingAvailable: isAvailable,
+                parkingInfo: intro.parking,
+              };
+            }
+
+            return { tour, isParkingAvailable: false, parkingInfo: null };
+          } catch (error) {
+            console.warn(
+              `[HomePage] 주차 정보 확인 실패 (${tour.contentid}):`,
+              error,
+            );
+            return { tour, isParkingAvailable: false, parkingInfo: null };
+          }
+        }),
+      );
+
+      // 주차 가능한 관광지만 필터링
+      const filteredTours = parkingInfoResults
+        .filter(
+          (result) =>
+            result.status === "fulfilled" && result.value.isParkingAvailable,
+        )
+        .map((result) =>
+          result.status === "fulfilled" ? result.value.tour : null,
+        )
+        .filter((tour): tour is TourItem => tour !== null);
+
+      console.log("[HomePage] 주차 가능 필터링 완료:", {
+        원본: tours.length,
+        필터링후: filteredTours.length,
+      });
+
+      tours = filteredTours;
+    }
+
     // 정렬 처리 (클라이언트 사이드)
     if (sort === "name-asc") {
       tours = [...tours].sort((a, b) => a.title.localeCompare(b.title, "ko"));
@@ -222,6 +293,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       keyword,
       page,
       sort,
+      petFriendly,
+      parkingAvailable,
       count: tours.length,
       totalPages,
       method: keyword ? "searchKeyword" : "areaBasedList",
